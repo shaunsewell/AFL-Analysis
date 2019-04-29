@@ -103,30 +103,30 @@ class DataScraper:
         attendance = attendance_string[-1]
 
         # Get the stats
-        home_team_stats = {}
-        away_team_stats = {}
-        
+        home_team_stats, away_team_stats = self.get_stats(soup)
+        home_team_stats, away_team_stats = self.get_advanced_stats(match_id, home_team_stats, away_team_stats)
+
+        return Match(match_id, home_team, away_team, venue, round_number, day, date, attendance, home_team_stats, away_team_stats)
+    
+    def get_stats(self, soup):
+        home_stats = {}
+        away_stats = {}
+
         for stat in stats:
             stat_row = soup.find_all('td', text=stat)[0].find_parent('tr')
             stat_elements = stat_row.find_all('td')
 
             if stat_elements != None:
                 if stat_elements[0].text == '-':
-                    home_team_stats[stat] = None
+                    home_stats[stat] = None
                 else:
-                    home_team_stats[stat] = stat_elements[0].text
+                    home_stats[stat] = stat_elements[0].text
                 
                 if stat_elements[2].text == '-':
-                    away_team_stats[stat] = None
+                    away_stats[stat] = None
                 else:
-                    away_team_stats[stat] = stat_elements[2].text
-        
-        home_team_stats, away_team_stats = self.get_advanced_stats(match_id, home_team_stats, away_team_stats)
-
-        return Match(match_id, home_team, away_team, venue, round_number, day, date, attendance, home_team_stats, away_team_stats)
-    
-    def get_stats(self, soup):
-        raise NotImplementedError
+                    away_stats[stat] = stat_elements[2].text
+        return home_stats, away_stats
 
     def get_advanced_stats(self, match_id, home_stats, away_stats):
         response = self.session_obj.get(self.base_URL + str(match_id) + "&advv=Y", headers=self.headers)
