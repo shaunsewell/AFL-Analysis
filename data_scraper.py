@@ -44,12 +44,31 @@ class DataScraper:
     def get_match(self, match_id):
         response = self.session_obj.get(self.base_URL + str(match_id), headers=self.headers)
         soup = BeautifulSoup(response.text, features="html.parser")
-
-        print(soup.find(string=re.compile("defeat")))
         # returns a page title of the form: 
         # Home Team defeated by Away Team at Venue Round Number Day, Date(dd,mm,yy)
         # Brisbane defeated by Collingwood at Gabba Round 5 Thursday, 18th April 2019
 
+        # defeated by, defeats, drew with, defeat 
+
+        seperators = ["defeated by", "defeats", "defeat", "drew"]
+        split_title = None 
+        for s in seperators:
+            title = soup.find(string=re.compile(s))
+            if title != None:
+                #replace defeated by with defeated_by to making traversing the array simpler
+                modified_title = title.replace('defeated by', 'defeated_by')
+
+                #do the same for the multi word team names
+                for key in converted_names:
+                    modified_title = modified_title.replace(key, converted_names[key])
+
+                split_title = modified_title.split(' ')
+                # index 0 - 3 is 'AFL' 'Match' 'Statistics' ':' and can be ignored
+
+                break
+        home_team = split_title[4]
+        away_team = split_title[6]
+        print(home_team + " vs " + away_team)
     #def get_players(self, match_id):
         
     #def get_player(self, player_name):
@@ -75,4 +94,5 @@ class Player:
         
         
 scraper = DataScraper()
-scraper.get_match(9757)
+for i in range(9307, 9720 + 1): 
+    scraper.get_match(i)
