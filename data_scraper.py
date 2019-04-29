@@ -47,8 +47,9 @@ class DataScraper:
         # returns a page title of the form: 
         # Home Team defeated by Away Team at Venue Round Number Day, Date(dd,mm,yy)
         # Brisbane defeated by Collingwood at Gabba Round 5 Thursday, 18th April 2019
-
-        # defeated by, defeats, drew with, defeat 
+        # After spliting: 
+        # ['AFL', 'Match', 'Statistics', ':', 'St_Kilda', 'defeated_by', 'Melbourne', 
+        # 'at', 'Marvel', 'Stadium', 'Round', '1', 'Saturday,', '25th', 'March', '2017']
 
         seperators = ["defeated by", "defeats", "defeat", "drew"]
         split_title = None 
@@ -66,9 +67,26 @@ class DataScraper:
                 # index 0 - 3 is 'AFL' 'Match' 'Statistics' ':' and can be ignored
 
                 break
+        # Set home and away teams
         home_team = split_title[4]
         away_team = split_title[6]
-        print(home_team + " vs " + away_team)
+
+        # Set the venue and round number
+        venue = ""
+        round_number = 0
+        if split_title[9] == 'Round':
+            venue = split_title[8]
+            round_number = int(split_title[10])
+        elif split_title[10] == 'Round': 
+            venue = split_title[8] + " " + split_title[9]
+            round_number = int(split_title[11])
+        else:
+            venue = split_title[8] + " " + split_title[9] + " " + split_title[10]
+            round_number = int(split_title[12])
+        
+        print(round_number)
+
+        #return Match(match_id, home_team, away_team, venue, round_number, date, attendance, home_team_stats, away_team_stats)
     #def get_players(self, match_id):
         
     #def get_player(self, player_name):
