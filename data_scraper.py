@@ -7,6 +7,7 @@
 from bs4 import BeautifulSoup
 import requests
 import re
+from time import sleep
 
 # Outline stats to gather
 stats = ['Disposals', 'Kicks', 'Handballs', 'Marks', 
@@ -27,6 +28,7 @@ converted_names = {'Gold Coast' : 'Gold_Coast', 'North Melbourne' : 'North_Melbo
                     'Port Adelaide': 'Port_Adelaide', 'St Kilda': 'St_Kilda', 
                     'West Coast': 'West_Coast', 'Western Bulldogs': 'Western_Bulldogs'}
 
+finals_to_rounds = {'Qualifying' : 24, 'Elimination' : 24, 'Semi' : 25, 'Preliminary' : 26, 'Grand' : 27}
 # Original Header for footywire.com.au 
 # Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3
 # Removed the image references to reduce response data.
@@ -73,31 +75,65 @@ class DataScraper:
 
         # Set the venue and round number
         venue = ""
-        round_number = 0
+        round_number = ""
         if split_title[9] == 'Round':
             venue = split_title[8]
-            round_number = int(split_title[10])
+            round_number = split_title[10]
         elif split_title[10] == 'Round': 
             venue = split_title[8] + " " + split_title[9]
-            round_number = int(split_title[11])
-        else:
+            round_number = split_title[11]
+        elif split_title[11] == 'Round':
             venue = split_title[8] + " " + split_title[9] + " " + split_title[10]
-            round_number = int(split_title[12])
-        
-        print(round_number)
+            round_number = split_title[12]
+        else: # Must be a final
+            if split_title[10] == 'Final':
+                venue = split_title[8]
+                round_number = split_title[9] + " " + split_title[10]
+            elif split_title[11] == 'Final': 
+                venue = split_title[8] + " " + split_title[9]
+                round_number = split_title[10] + " " + split_title[11]
 
-        #return Match(match_id, home_team, away_team, venue, round_number, date, attendance, home_team_stats, away_team_stats)
+
+        # Set the day and date of the match
+        day = split_title[-4].replace(',','')
+        date = split_title[-3] + ' ' + split_title[-2] + ' ' + split_title[-1]
+
+        # Set the attendance
+        attendance_string = soup.find(text=re.compile('Attendance:')).split(' ')
+        attendance = attendance_string[-1]
+        
+        # Get the stats
+        home_team_stats = {}
+        away_team_stats = {}
+        
+        for stat in stats:
+            stat_row = soup.find_all('td', text=stat)[0].find_parent('tr')
+            stat_elements = stat_row.find_all('td')
+
+            if stat_elements != None:
+                if stat_elements[0].text == '-':
+                    home_team_stats[stat] = None
+                else:
+                    home_team_stats[stat] = stat_elements[0].text
+                
+                if stat_elements[2].text == '-':
+                    away_team_stats[stat] = None
+                else:
+                    away_team_stats[stat] = stat_elements[2].text
+
+        return Match(match_id, home_team, away_team, venue, round_number, day, date, attendance, home_team_stats, away_team_stats)
     #def get_players(self, match_id):
         
     #def get_player(self, player_name):
 
 class Match:
-    def __init__(self, match_id, home_team, away_team, venue, round_number, date, attendance, home_team_stats, away_team_stats):
+    def __init__(self, match_id, home_team, away_team, venue, round_number, day, date, attendance, home_team_stats, away_team_stats):
         self.match_id = match_id
         self.home_team = home_team
         self.away_team = away_team
         self.venue = venue
         self.round_number = round_number
+        self.day = day
         self.date = date
         self.attendance = attendance
         self.home_team_stats = home_team_stats
@@ -112,5 +148,6 @@ class Player:
         
         
 scraper = DataScraper()
-for i in range(9307, 9720 + 1): 
-    scraper.get_match(i)
+for i in range(9500, 9500 + 1): 
+    m = scraper.get_match(i)
+    print(m.home_team_stats)
