@@ -1,8 +1,12 @@
-# data_scrapper.py
+# data_scraper.py
 # Created by Shaun Sewell on 24/4/19.
 #
-# Script for scrapping afl stats from footywire.com.au
+# Script for scraping afl stats from footywire.com.au
 #
+
+from bs4 import BeautifulSoup
+import requests
+import re
 
 # Outline stats to gather
 stats = ['Disposals', 'Kicks', 'Handballs', 'Marks', 
@@ -27,20 +31,28 @@ converted_names = {'Gold Coast' : 'Gold_Coast', 'North Melbourne' : 'North_Melbo
 # Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3
 # Removed the image references to reduce response data.
 
-class DataScrapper:
+class DataScraper:
     def __init__(self):
         self.headers = {"User-Agent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/73.0.3683.103 Safari/537.36","Accept":"text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8", "Referer":"http://www.google.com.au","Cache-Control":"max-age=0"}
-        self.baseURL = "http://www.footywire.com/afl/footy/ft_match_statistics?mid="
-        
-    def convert_team_names(self, team_str):
-                
-    def get_matches(self, start_match_id, end_match_id):
-    
-    def get_match(self, match_id):
+        self.base_URL = "http://www.footywire.com/afl/footy/ft_match_statistics?mid="
+        self.session_obj = requests.Session()
+           
+    #def convert_team_names(self, team_str):
+              
+    #def get_matches(self, start_match_id, end_match_id):
 
-    def get_players(self, match_id):
+    def get_match(self, match_id):
+        response = self.session_obj.get(self.base_URL + str(match_id), headers=self.headers)
+        soup = BeautifulSoup(response.text, features="html.parser")
+
+        print(soup.find(string=re.compile("defeat")))
+        # returns a page title of the form: 
+        # Home Team defeated by Away Team at Venue Round Number Day, Date(dd,mm,yy)
+        # Brisbane defeated by Collingwood at Gabba Round 5 Thursday, 18th April 2019
+
+    #def get_players(self, match_id):
         
-    def get_player(self, player_name):
+    #def get_player(self, player_name):
 
 class Match:
     def __init__(self, match_id, home_team, away_team, venue, round_number, date, attendance, home_team_stats, away_team_stats):
@@ -55,9 +67,12 @@ class Match:
         self.away_team_stats = away_team_stats
         
 class Player:
-    def def __init__(self, player_id, player_name, player_team, player_age, player_stats):
+    def __init__(self, player_id, player_name, player_team, player_age, player_stats):
         self.player_id = player_id
         self.player_name = player_name
         self.player_team = player_team
         self.player_stats = player_stats
         
+        
+scraper = DataScraper()
+scraper.get_match(9757)
