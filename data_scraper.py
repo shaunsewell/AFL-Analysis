@@ -39,8 +39,21 @@ class DataScraper:
         self.base_URL = "http://www.footywire.com/afl/footy/ft_match_statistics?mid="
         self.session_obj = requests.Session()
            
-    #def convert_team_names(self, team_str):
-              
+    def fix_title_string(self, soup):
+        seperators = ["defeated by", "defeats", "defeat", "drew"]
+        for s in seperators:
+            title = soup.find(string=re.compile(s))
+            if title != None:
+                #replace defeated by with defeated_by to making traversing the array simpler
+                modified_title = title.replace('defeated by', 'defeated_by')
+
+                #do the same for the multi word team names
+                for key in converted_names:
+                    modified_title = modified_title.replace(key, converted_names[key])
+
+                split_title = modified_title.split(' ')
+                return split_title
+        
     #def get_matches(self, start_match_id, end_match_id):
 
     def get_match(self, match_id):
@@ -53,22 +66,8 @@ class DataScraper:
         # ['AFL', 'Match', 'Statistics', ':', 'St_Kilda', 'defeated_by', 'Melbourne', 
         # 'at', 'Marvel', 'Stadium', 'Round', '1', 'Saturday,', '25th', 'March', '2017']
 
-        seperators = ["defeated by", "defeats", "defeat", "drew"]
-        split_title = None 
-        for s in seperators:
-            title = soup.find(string=re.compile(s))
-            if title != None:
-                #replace defeated by with defeated_by to making traversing the array simpler
-                modified_title = title.replace('defeated by', 'defeated_by')
-
-                #do the same for the multi word team names
-                for key in converted_names:
-                    modified_title = modified_title.replace(key, converted_names[key])
-
-                split_title = modified_title.split(' ')
-                # index 0 - 3 is 'AFL' 'Match' 'Statistics' ':' and can be ignored
-
-                break
+        split_title = self.fix_title_string(soup) 
+        # index 0 - 3 is 'AFL' 'Match' 'Statistics' ':' and can be ignored
         # Set home and away teams
         home_team = split_title[4]
         away_team = split_title[6]
