@@ -8,6 +8,7 @@ from bs4 import BeautifulSoup
 import requests
 import re
 from progress.bar import Bar
+import csv
 
 # Outline stats to gather
 stats = ['Disposals', 'Kicks', 'Handballs', 'Marks', 
@@ -114,7 +115,7 @@ class DataScraper:
         # Get the stats
         home_team_stats, away_team_stats = self.get_stats(soup)
         home_team_stats, away_team_stats = self.get_advanced_stats(match_id, home_team_stats, away_team_stats)
-
+        home_team_stats, away_team_stats = self.get_match_winner(soup, home_team_stats, away_team_stats)
         return Match(match_id, home_team, away_team, venue, round_number, day, date, attendance, home_team_stats, away_team_stats)
     
     def get_stats(self, soup):
@@ -135,6 +136,7 @@ class DataScraper:
                     away_stats[stat] = None
                 else:
                     away_stats[stat] = stat_elements[2].text
+        
         return home_stats, away_stats
 
     def get_advanced_stats(self, match_id, home_stats, away_stats):
@@ -155,9 +157,23 @@ class DataScraper:
                     away_stats[stat] = None
                 else:
                     away_stats[stat] = advanced_stat_elements[2].text
+        
         return home_stats, away_stats
 
+    def get_match_winner(self, soup, home_stats, away_stats):
+        end_result = soup.find_all('td', text='End of Game')[0].find_parent('tr')
+        end_result_element = end_result.find_all('td')
+        if 'Won' in end_result_element[0].text:
+            home_stats['Winner'] = 1
+            away_stats['Winner'] = 0
+        elif 'Won' in end_result_element[2].text:
+            home_stats['Winner'] = 0
+            away_stats['Winner'] = 1
+        else:
+            home_stats['Winner'] = 0
+            away_stats['Winner'] = 0
         
+        return home_stats, away_stats
     #def get_players(self, match_id):
         
     #def get_player(self, player_name):
@@ -184,14 +200,40 @@ class Player:
         
         
 scraper = DataScraper()
-match_list = scraper.get_matches(9514, 9520) #9720
-for match in match_list:
-    home_stat_line = ""
-    for keys in match.home_team_stats:
-        home_stat_line += keys + ": " + match.home_team_stats[keys] + " "
-    
+match_list = scraper.get_matches(9514, 9514) #9720
+stat_list = []
 
-    away_stat_line = ""
-    for keys in match.home_team_stats:
-        away_stat_line += keys + ": " + match.home_team_stats[keys] + " "
-    
+column_headers = ['Round', 'Venue', 'Day', 'Date', 'Attendance', 'Team','Disposals', 'Kicks', 
+                'Handballs', 'Marks', 'Tackles', 'Hitouts', 'Clearances', 'Clangers',
+                'Frees For', 'Frees Against', 'Goals Kicked', 'Behinds Kicked',
+                'Rushed Behinds', 'Scoring Shots', 'Goal Assists', 'Inside 50s',
+                'Rebound 50s', 'Contested Possesions', 'Uncontested Possesions',
+                'Effective Disposals', 'Disposal Efficiency %', 'Contested Marks',
+                'Marks Inside 50', 'One Percenters', 'Bounces', 'Centre Clearances',
+                'Stoppage Clearances', 'Score Involvments', 'Metres Gained', 'Turnovers',
+                'Intercepts', 'Tackles Inside 50', 'Winner']
+
+with Bar('Processing stats of export', max=len(match_list), suffix='%(percent)d%% - %(eta)ds remaining') as stats_bar:
+    for match in match_list:
+        home_stat_line = [match.round_number, match.venue, match.day, match.date, match.attendance, match.home_team]
+        for keys in match.home_team_stats:
+            home_stat_line.append(match.home_team_stats[keys])
+        stat_list.append(home_stat_line)
+
+        away_stat_line = [match.round_number, match.venue, match.day, match.date, match.attendance, match.away_team]
+        for keys in match.away_team_stats:
+            away_stat_line.append(match.away_team_stats[keys])
+        stat_list.append(away_stat_line)
+        stats_bar.next()
+    stats_bar.finish()
+
+
+with Bar('Exporting', max=len(stat_list), suffix='%(percent)d%% - %(eta)ds remaining') as export_bar:
+    with open('MatchStats2018.csv', mode='w') as stats_file:
+        stats_writer = csv.writer(stats_file, delimiter=',')
+        stats_writer.writerow(column_headers)
+        for row in stat_list:
+            stats_writer.writerow(row)
+            export_bar.next()
+    export_bar.finish()
+
