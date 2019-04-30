@@ -7,7 +7,7 @@
 from bs4 import BeautifulSoup
 import requests
 import re
-from time import sleep
+from progress.bar import Bar
 
 # Outline stats to gather
 stats = ['Disposals', 'Kicks', 'Handballs', 'Marks', 
@@ -62,9 +62,12 @@ class DataScraper:
         
     def get_matches(self, start_match_id, end_match_id):
         Matches = []
-        for id in range(start_match_id, end_match_id + 1): 
-            match = self.get_match(id)
-            Matches.append(match)
+        with Bar('Getting Matches', max=(end_match_id + 1) - start_match_id, suffix='%(percent)d%% - %(eta)ds remaining') as bar:
+            for id in range(start_match_id, end_match_id + 1): 
+                match = self.get_match(id)
+                Matches.append(match)
+                bar.next()
+            bar.finish()
         return Matches
     
     def get_match(self, match_id):
@@ -186,9 +189,9 @@ for match in match_list:
     home_stat_line = ""
     for keys in match.home_team_stats:
         home_stat_line += keys + ": " + match.home_team_stats[keys] + " "
-    print(match.home_team + " - " + home_stat_line + "\n")
+    
 
     away_stat_line = ""
     for keys in match.home_team_stats:
         away_stat_line += keys + ": " + match.home_team_stats[keys] + " "
-    print(match.away_team + " - " + away_stat_line + "\n")
+    
