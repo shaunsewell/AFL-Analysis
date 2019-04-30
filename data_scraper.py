@@ -40,6 +40,12 @@ class DataScraper:
         self.session_obj = requests.Session()
            
     def fix_title_string(self, soup):
+        # Home Team defeated by Away Team at Venue Round Number Day, Date(dd,mm,yy)
+        # St Kilda defeated by Melbourne at Marvel Stadium Round 1 Saturday, 25th March 2017
+        # After spliting: 
+        # ['AFL', 'Match', 'Statistics', ':', 'St_Kilda', 'defeated_by', 'Melbourne', 
+        # 'at', 'Marvel', 'Stadium', 'Round', '1', 'Saturday,', '25th', 'March', '2017']
+
         seperators = ["defeated by", "defeats", "defeat", "drew"]
         for s in seperators:
             title = soup.find(string=re.compile(s))
@@ -54,17 +60,18 @@ class DataScraper:
                 split_title = modified_title.split(' ')
                 return split_title
         
-    #def get_matches(self, start_match_id, end_match_id):
-
+    def get_matches(self, start_match_id, end_match_id):
+        Matches = []
+        for id in range(start_match_id, end_match_id + 1): 
+            match = self.get_match(id)
+            Matches.append(match)
+        return Matches
+    
     def get_match(self, match_id):
         response = self.session_obj.get(self.base_URL + str(match_id), headers=self.headers)
         soup = BeautifulSoup(response.text, features="html.parser")
         # returns a page title of the form: 
-        # Home Team defeated by Away Team at Venue Round Number Day, Date(dd,mm,yy)
-        # Brisbane defeated by Collingwood at Gabba Round 5 Thursday, 18th April 2019
-        # After spliting: 
-        # ['AFL', 'Match', 'Statistics', ':', 'St_Kilda', 'defeated_by', 'Melbourne', 
-        # 'at', 'Marvel', 'Stadium', 'Round', '1', 'Saturday,', '25th', 'March', '2017']
+        
 
         split_title = self.fix_title_string(soup) 
         # index 0 - 3 is 'AFL' 'Match' 'Statistics' ':' and can be ignored
@@ -174,6 +181,14 @@ class Player:
         
         
 scraper = DataScraper()
-for i in range(9500, 9500 + 1): 
-    m = scraper.get_match(i)
-    print(m.home_team_stats)
+match_list = scraper.get_matches(9514, 9520) #9720
+for match in match_list:
+    home_stat_line = ""
+    for keys in match.home_team_stats:
+        home_stat_line += keys + ": " + match.home_team_stats[keys] + " "
+    print(match.home_team + " - " + home_stat_line + "\n")
+
+    away_stat_line = ""
+    for keys in match.home_team_stats:
+        away_stat_line += keys + ": " + match.home_team_stats[keys] + " "
+    print(match.away_team + " - " + away_stat_line + "\n")
