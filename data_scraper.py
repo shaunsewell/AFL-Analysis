@@ -28,14 +28,41 @@ advanced_stats = ['Contested Possessions', 'Uncontested Possessions',
 converted_names = {'Gold Coast' : 'Gold_Coast', 'North Melbourne' : 'North_Melbourne', 
                     'Port Adelaide': 'Port_Adelaide', 'St Kilda': 'St_Kilda', 
                     'West Coast': 'West_Coast', 'Western Bulldogs': 'Western_Bulldogs'}
+#-----------------------------------------------------------------------------------------------------------------------
+# Convenience functions
+def export_matches(list_of_matches, file_name):
 
-finals_to_rounds = {'Qualifying' : 24, 'Elimination' : 24, 'Semi' : 25, 'Preliminary' : 26, 'Grand' : 27}
-# Original Header for footywire.com.au 
-# Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3
-# Removed the image references to reduce response data.
+        stat_list = []
+
+        with Bar('Processing stats for export', max=len(match_list), suffix='%(percent)d%% - %(eta)ds remaining') as stats_bar:
+            for match in list_of_matches:
+                home_stat_line = [match.round_number, match.venue, match.day, match.date, match.attendance, match.home_team]
+                for keys in match.home_team_stats:
+                    home_stat_line.append(match.home_team_stats[keys])
+                stat_list.append(home_stat_line)
+
+                away_stat_line = [match.round_number, match.venue, match.day, match.date, match.attendance, match.away_team]
+                for keys in match.away_team_stats:
+                    away_stat_line.append(match.away_team_stats[keys])
+                stat_list.append(away_stat_line)
+                stats_bar.next()
+            stats_bar.finish()
+
+
+        with Bar('Exporting', max=len(stat_list), suffix='%(percent)d%% - %(eta)ds remaining') as export_bar:
+            with open(file_name, mode='w') as stats_file:
+                stats_writer = csv.writer(stats_file, delimiter=',')
+                for row in stat_list:
+                    stats_writer.writerow(row)
+                    export_bar.next()
+            export_bar.finish()
+#-----------------------------------------------------------------------------------------------------------------------
 
 class DataScraper:
     def __init__(self):
+        # Original Header for footywire.com.au 
+        # Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3
+        # Removed the image references to reduce response data.
         self.headers = {"User-Agent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/73.0.3683.103 Safari/537.36","Accept":"text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8", "Referer":"http://www.google.com.au","Cache-Control":"max-age=0"}
         self.base_URL = "http://www.footywire.com/afl/footy/ft_match_statistics?mid="
         self.session_obj = requests.Session()
@@ -136,7 +163,8 @@ class DataScraper:
                     away_stats[stat] = None
                 else:
                     away_stats[stat] = stat_elements[2].text
-        
+            
+
         return home_stats, away_stats
 
     def get_advanced_stats(self, match_id, home_stats, away_stats):
@@ -148,15 +176,19 @@ class DataScraper:
             advanced_stat_elements = advanced_stat_row.find_all('td')
             
             if advanced_stat_elements != None:
-                if advanced_stat_elements[0].text == '-':
+                #Remove any annoying % signs
+                temp_home = advanced_stat_elements[0].text.replace('%','')
+                temp_away = advanced_stat_elements[2].text.replace('%','')
+
+                if temp_home == '-':
                     home_stats[stat] = None
                 else:
-                    home_stats[stat] = advanced_stat_elements[0].text
+                    home_stats[stat] = temp_home
                 
-                if advanced_stat_elements[2].text == '-':
+                if temp_away == '-':
                     away_stats[stat] = None
                 else:
-                    away_stats[stat] = advanced_stat_elements[2].text
+                    away_stats[stat] = temp_away
         
         return home_stats, away_stats
 
@@ -174,6 +206,8 @@ class DataScraper:
             away_stats['Winner'] = 0
         
         return home_stats, away_stats
+
+
     #def get_players(self, match_id):
         
     #def get_player(self, player_name):
@@ -198,42 +232,21 @@ class Player:
         self.player_team = player_team
         self.player_stats = player_stats
         
-        
+#-----------------------------------------------------------------------------------------------------------------------
+# Testing implementation of functions  
+
 scraper = DataScraper()
-match_list = scraper.get_matches(9514, 9514) #9720
-stat_list = []
+match_list = scraper.get_matches(9514, 9720) #9720
+export_matches(match_list, "MatchStats2018.csv")
 
-column_headers = ['Round', 'Venue', 'Day', 'Date', 'Attendance', 'Team','Disposals', 'Kicks', 
-                'Handballs', 'Marks', 'Tackles', 'Hitouts', 'Clearances', 'Clangers',
-                'Frees For', 'Frees Against', 'Goals Kicked', 'Behinds Kicked',
-                'Rushed Behinds', 'Scoring Shots', 'Goal Assists', 'Inside 50s',
-                'Rebound 50s', 'Contested Possesions', 'Uncontested Possesions',
-                'Effective Disposals', 'Disposal Efficiency %', 'Contested Marks',
-                'Marks Inside 50', 'One Percenters', 'Bounces', 'Centre Clearances',
-                'Stoppage Clearances', 'Score Involvments', 'Metres Gained', 'Turnovers',
-                'Intercepts', 'Tackles Inside 50', 'Winner']
-
-with Bar('Processing stats of export', max=len(match_list), suffix='%(percent)d%% - %(eta)ds remaining') as stats_bar:
-    for match in match_list:
-        home_stat_line = [match.round_number, match.venue, match.day, match.date, match.attendance, match.home_team]
-        for keys in match.home_team_stats:
-            home_stat_line.append(match.home_team_stats[keys])
-        stat_list.append(home_stat_line)
-
-        away_stat_line = [match.round_number, match.venue, match.day, match.date, match.attendance, match.away_team]
-        for keys in match.away_team_stats:
-            away_stat_line.append(match.away_team_stats[keys])
-        stat_list.append(away_stat_line)
-        stats_bar.next()
-    stats_bar.finish()
-
-
-with Bar('Exporting', max=len(stat_list), suffix='%(percent)d%% - %(eta)ds remaining') as export_bar:
-    with open('MatchStats2018.csv', mode='w') as stats_file:
-        stats_writer = csv.writer(stats_file, delimiter=',')
-        stats_writer.writerow(column_headers)
-        for row in stat_list:
-            stats_writer.writerow(row)
-            export_bar.next()
-    export_bar.finish()
+# Layout of columns in season match list
+# column_headers = ['Round', 'Venue', 'Day', 'Date', 'Attendance', 'Team','Disposals', 'Kicks', 
+#                 'Handballs', 'Marks', 'Tackles', 'Hitouts', 'Clearances', 'Clangers',
+#                 'Frees For', 'Frees Against', 'Goals Kicked', 'Behinds Kicked',
+#                 'Rushed Behinds', 'Scoring Shots', 'Goal Assists', 'Inside 50s',
+#                 'Rebound 50s', 'Contested Possesions', 'Uncontested Possesions',
+#                 'Effective Disposals', 'Disposal Efficiency %', 'Contested Marks',
+#                 'Marks Inside 50', 'One Percenters', 'Bounces', 'Centre Clearances',
+#                 'Stoppage Clearances', 'Score Involvments', 'Metres Gained', 'Turnovers',
+#                 'Intercepts', 'Tackles Inside 50', 'Winner']
 
